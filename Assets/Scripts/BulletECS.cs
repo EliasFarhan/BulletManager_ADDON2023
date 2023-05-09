@@ -7,6 +7,7 @@ using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Rendering;
 using Unity.Burst;
+using Unity.VisualScripting.Dependencies.Sqlite;
 
 namespace Bullet
 {
@@ -26,7 +27,7 @@ public class BulletManager : MonoBehaviour
 	
 	public NativeArray<int> enemiesHitCount;
 
-	BulletUpdateJob2 updateJob;
+	BulletUpdateJob updateJob;
 	JobHandle jobHandle;
 	
     void Start()
@@ -51,7 +52,7 @@ public class BulletManager : MonoBehaviour
 			};
 		}
 		
-		updateJob = new BulletUpdateJob2
+		updateJob = new BulletUpdateJob
 		{
 			BulletCircles = bulletCircles,
 			EnemyCircles = enemyCircles,
@@ -84,48 +85,26 @@ public class BulletManager : MonoBehaviour
 		public NativeArray<Circle> BulletCircles;
 		[ReadOnly]
 		public NativeArray<Circle> EnemyCircles;
-
 		[WriteOnly]
 		public NativeArray<int> EnemiesHitCount;
 
 		public void Execute(int enemyIndex)
 		{
-			EnemiesHitCount[enemyIndex] = 0;
+			int result = 0;
 			for (int i = 0; i < BulletCircles.Length; i++)
 			{
 				var delta = BulletCircles[i].position - EnemyCircles[enemyIndex].position;
 				var radius = BulletCircles[i].radius + EnemyCircles[enemyIndex].radius;
 				if(math.lengthsq(delta) < radius * radius)
 				{
-					EnemiesHitCount[enemyIndex]++;
+					result++;
 				}
 			}
-			
+
+			EnemiesHitCount[enemyIndex] = result;
 		}
 	}
 	
-	[BurstCompile(FloatMode = FloatMode.Fast, FloatPrecision = FloatPrecision.Low)]
-	private struct BulletUpdateJob2 : IJobParallelFor
-	{
-		[ReadOnly]
-		public NativeArray<Circle> BulletCircles;
-		[ReadOnly]
-		public NativeArray<Circle> EnemyCircles;
-
-		public NativeArray<int> EnemiesHitCount;
-
-		public void Execute(int enemyIndex)
-		{
-			EnemiesHitCount[enemyIndex] = 0;
-			for (int i = 0; i < BulletCircles.Length; i++)
-			{
-				var delta = BulletCircles[i].position - EnemyCircles[enemyIndex].position;
-				var radius = BulletCircles[i].radius + EnemyCircles[enemyIndex].radius;
-				EnemiesHitCount[enemyIndex] += Convert.ToInt32(math.lengthsq(delta) < radius * radius);
-			}
-			
-		}
-	}
 
 }
 }
